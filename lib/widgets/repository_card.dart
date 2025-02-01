@@ -19,8 +19,9 @@ class RepositoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.indigo.withOpacity(0.4),
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-      elevation: 2,
+      elevation: 0,
       child: InkWell(
         onTap: onTap,
         child: Padding(

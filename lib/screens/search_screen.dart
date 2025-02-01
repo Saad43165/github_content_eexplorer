@@ -211,97 +211,104 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('GitHub Explorer'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          children: [
-            // Search Input Field
-            TextField(
-              controller: _searchController,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: 'Search Repositories',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onSubmitted: _onSearchSubmitted,
-            ),
-            SizedBox(height: 12),
-            if (_isLoading)
-              Expanded(child: Center(child: CircularProgressIndicator()))
-            else if (_errorMessage.isNotEmpty)
-              Expanded(child: Center(child: Text(_errorMessage)))
-            else if (_repositories.isEmpty)
-                Expanded(child: Center(child: Text('No results. Enter a search query.')))
-              else
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      if (_searchController.text.trim().isNotEmpty) {
-                        _onSearchSubmitted(_searchController.text.trim());
-                      }
-                    },
-                    child: ListView.builder(
-                      itemCount: _repositories.length,
-                      itemBuilder: (context, index) {
-                        final repo = _repositories[index];
-                        return RepositoryCard(
-                          repository: repo,
-                          isFavorite: _favoriteRepoIds.contains(repo.id),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DetailsScreen(repository: repo),
-                              ),
-                            );
-                          },
-                          onFavoriteToggle: () => _toggleFavorite(repo),
-                        );
-                      },
-                    ),
+    return SafeArea(
+      child: Scaffold(
+
+        body: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('GitHub Explorer',style: TextStyle(fontWeight: FontWeight.bold,fontSize: 24),),
+              Divider(endIndent: 190,color: Colors.indigo,thickness: 2,),
+              SizedBox(height: 10),
+              // Search Input Field
+              TextField(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'Search Repositories',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-          ],
+                onSubmitted: _onSearchSubmitted,
+              ),
+              SizedBox(height: 12),
+              if (_isLoading)
+                Expanded(child: Center(child: CircularProgressIndicator()))
+              else if (_errorMessage.isNotEmpty)
+                Expanded(child: Center(child: Text(_errorMessage)))
+              else if (_repositories.isEmpty)
+                  Expanded(child: Center(child: Text('No results. Enter a search query.')))
+                else
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        if (_searchController.text.trim().isNotEmpty) {
+                          _onSearchSubmitted(_searchController.text.trim());
+                        }
+                      },
+                      child: ListView.builder(
+                        itemCount: _repositories.length,
+                        itemBuilder: (context, index) {
+                          final repo = _repositories[index];
+                          return RepositoryCard(
+                            repository: repo,
+                            isFavorite: _favoriteRepoIds.contains(repo.id),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => DetailsScreen(repository: repo),
+                                ),
+                              );
+                            },
+                            onFavoriteToggle: () => _toggleFavorite(repo),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+            ],
+          ),
         ),
-      ),
-      // New Bottom Bar with History, Favorites, and Dark Mode Buttons
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: BottomAppBar(
-          color: Colors.indigoAccent,
-          shape: CircularNotchedRectangle(),
-          elevation: 8,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                IconButton(
-                  tooltip: 'Recent Searches',
-                  icon: Icon(Icons.history, size: 28),
-                  onPressed: _showRecentSearches,
+        // New Bottom Bar with History, Favorites, and Dark Mode Buttons
+        bottomNavigationBar: Padding(
+          padding: const EdgeInsets.only(bottom: 10, left: 5, right: 5),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(15), // Ensure clipping
+            child: BottomAppBar(
+              color: Colors.indigo.withOpacity(0.4), // Make it transparent for Container styling
+              elevation: 1, // Remove extra elevation
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    IconButton(
+                      tooltip: 'Recent Searches',
+                      icon: Icon(Icons.history, size: 28),
+                      onPressed: _showRecentSearches,
+                    ),
+                    IconButton(
+                      tooltip: 'Favorites',
+                      icon: Icon(Icons.favorite, size: 28),
+                      onPressed: _showFavoritesBottomSheet,
+                    ),
+                    IconButton(
+                      tooltip: 'Toggle Theme',
+                      icon: Icon(Icons.brightness_6, size: 28),
+                      onPressed: widget.toggleTheme,
+                    ),
+                  ],
                 ),
-                IconButton(
-                  tooltip: 'Favorites',
-                  icon: Icon(Icons.favorite, size: 28),
-                  onPressed: _showFavoritesBottomSheet,
-                ),
-                IconButton(
-                  tooltip: 'Toggle Theme',
-                  icon: Icon(Icons.brightness_6, size: 28),
-                  onPressed: widget.toggleTheme,
-                ),
-              ],
+              ),
             ),
           ),
         ),
+      
       ),
     );
   }

@@ -42,6 +42,7 @@ dev_dependencies:
   cupertino_icons: ^1.0.2
   http: ^0.13.5
 
+
     # URL Launcher to open repository URLs in the browser
   url_launcher: ^6.1.7
 
