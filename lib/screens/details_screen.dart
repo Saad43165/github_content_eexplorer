@@ -3,12 +3,19 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import '../models/repository.dart';
 
-class DetailsScreen extends StatelessWidget {
+class DetailsScreen extends StatefulWidget {
   final Repository repository;
   const DetailsScreen({super.key, required this.repository});
 
+  @override
+  _DetailsScreenState createState() => _DetailsScreenState();
+}
+
+class _DetailsScreenState extends State<DetailsScreen> {
+  bool _isDescriptionExpanded = false;
+
   Future<void> _launchURL(BuildContext context) async {
-    final Uri url = Uri.parse('https://github.com/${repository.fullName}');
+    final Uri url = Uri.parse('https://github.com/${widget.repository.fullName}');
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not open URL')),
@@ -17,7 +24,7 @@ class DetailsScreen extends StatelessWidget {
   }
 
   void _copyLink(BuildContext context) {
-    final String repoUrl = 'https://github.com/${repository.fullName}';
+    final String repoUrl = 'https://github.com/${widget.repository.fullName}';
     Clipboard.setData(ClipboardData(text: repoUrl));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -65,22 +72,23 @@ class DetailsScreen extends StatelessWidget {
                   children: [
                     // Owner Avatar & Repo Name
                     CircleAvatar(
-                      backgroundImage: NetworkImage(repository.ownerAvatarUrl),
+                      backgroundImage: NetworkImage(widget.repository.ownerAvatarUrl),
                       radius: 50,
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      repository.fullName,
+                      widget.repository.fullName,
                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 10),
-                    Text(
-                      repository.description.isNotEmpty
-                          ? repository.description
-                          : 'No description available',
-                      style: const TextStyle(fontSize: 16, color: Colors.black87),
-                      textAlign: TextAlign.center,
+                    _getDescription(),
+                    GestureDetector(
+                      onTap: _toggleDescription,
+                      child: Text(
+                        _isDescriptionExpanded ? 'Show Less' : 'Show More',
+                        style: TextStyle(color: Colors.blueAccent, fontSize: 14),
+                      ),
                     ),
                     const SizedBox(height: 20),
 
@@ -88,8 +96,18 @@ class DetailsScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _buildStatItem(Icons.star, Colors.amber, repository.stargazersCount, 'Stars'),
-                        _buildStatItem(Icons.call_split, Colors.blue, repository.forksCount, 'Forks'),
+                        _buildStatItem(Icons.star, Colors.amber, widget.repository.stargazersCount, 'Stars'),
+                        _buildStatItem(Icons.call_split, Colors.blue, widget.repository.forksCount, 'Forks'),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Additional Info: Repository Language & Last Updated
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildStatItem(Icons.language, Colors.green, widget.repository.language ?? "Unknown", 'Language'),
+                        _buildStatItem(Icons.update, Colors.orange, widget.repository.updatedAt, 'Last Updated'),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -137,7 +155,40 @@ class DetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(IconData icon, Color? color, int count, String label) {
+  // Toggle Description Visibility
+  void _toggleDescription() {
+    setState(() {
+      _isDescriptionExpanded = !_isDescriptionExpanded;
+    });
+  }
+
+  // Get Description Text
+  Text _getDescription() {
+    if (widget.repository.description.isNotEmpty) {
+      if (_isDescriptionExpanded) {
+        return Text(
+          widget.repository.description,
+          style: const TextStyle(fontSize: 16, color: Colors.black87),
+          textAlign: TextAlign.center,
+        );
+      } else {
+        return Text(
+          widget.repository.description.length > 100
+              ? widget.repository.description.substring(0, 100) + '...'
+              : widget.repository.description,
+          style: const TextStyle(fontSize: 16, color: Colors.black87),
+          textAlign: TextAlign.center,
+        );
+      }
+    }
+    return const Text(
+      'No description available',
+      style: TextStyle(fontSize: 16, color: Colors.black87),
+      textAlign: TextAlign.center,
+    );
+  }
+
+  Widget _buildStatItem(IconData icon, Color? color, dynamic count, String label) {
     return Column(
       children: [
         Icon(icon, color: color, size: 32),
@@ -155,7 +206,6 @@ class DetailsScreen extends StatelessWidget {
   }
 }
 
-/// Glass Effect Container
 class GlassContainer extends StatelessWidget {
   final Widget child;
   const GlassContainer({super.key, required this.child});

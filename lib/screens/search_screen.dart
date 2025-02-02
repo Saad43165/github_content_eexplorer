@@ -15,6 +15,7 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   final GithubApiService _apiService = GithubApiService();
+  final ScrollController _scrollController = ScrollController();
 
   List<Repository> _repositories = [];
   bool _isLoading = false;
@@ -23,6 +24,51 @@ class _SearchScreenState extends State<SearchScreen> {
   final List<String> _recentSearches = [];
   String _selectedFilter = 'Repository Name';
   final List<Repository> _favoriteRepositories = [];
+  int _page = 1; // Start with page 1 for pagination
+  bool _hasMore = true; // Flag to check if there are more results to load
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_scrollListener); // Add listener for infinite scroll
+  }
+
+  void _scrollListener() {
+    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent && _hasMore) {
+      _loadMoreResults(); // Load more data when user reaches the bottom
+    }
+  }
+
+  Future<void> _loadMoreResults() async {
+    if (_isLoading) return; // Avoid multiple requests at the same time
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final repos = await _apiService.searchRepositories(
+        _searchController.text,
+        filter: _selectedFilter,
+        sort: '',
+        page: _page + 1, // Fetch next page
+      );
+      setState(() {
+        _repositories.addAll(repos);
+        _page++; // Increment page number
+        if (repos.isEmpty) {
+          _hasMore = false; // No more results to load
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error: $e';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   Future<void> _searchRepositories(String query) async {
     if (query.trim().isEmpty) return;
@@ -31,6 +77,10 @@ class _SearchScreenState extends State<SearchScreen> {
       _isLoading = true;
       _errorMessage = '';
       _repositories = [];
+      _favoriteRepoIds.clear(); // Reset favorite repositories on new search
+      _favoriteRepositories.clear(); // Reset favorites list
+      _hasMore = true;
+      _page = 1; // Reset to page 1
     });
 
     try {
@@ -69,12 +119,12 @@ class _SearchScreenState extends State<SearchScreen> {
     return GestureDetector(
       onTap: () => setState(() => _selectedFilter = filter),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        margin: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
           color: _selectedFilter == filter ? Colors.blueAccent : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.blueAccent),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.blueAccent, width: 2),
           boxShadow: [
             if (_selectedFilter == filter)
               BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 8, spreadRadius: 2),
@@ -164,12 +214,12 @@ class _SearchScreenState extends State<SearchScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+            children: <Widget>[
               const SizedBox(height: 60),
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(30),
                   boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
                 ),
                 child: TextField(
@@ -186,23 +236,8 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               const SizedBox(height: 16),
               if (_recentSearches.isNotEmpty)
-                Wrap(
-                  children: _recentSearches
-                      .map((query) => GestureDetector(
-                    onTap: () => _searchRepositories(query),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: Text(query),
-                    ),
-                  ))
-                      .toList(),
-                ),
-              const SizedBox(height: 16),
+
+                const SizedBox(height: 16),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -214,7 +249,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 13),
               if (_isLoading)
                 const Expanded(child: Center(child: CircularProgressIndicator()))
               else if (_errorMessage.isNotEmpty)
@@ -224,6 +259,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 else
                   Expanded(
                     child: ListView.builder(
+                      controller: _scrollController,
                       itemCount: _repositories.length,
                       itemBuilder: (context, index) {
                         final repo = _repositories[index];
@@ -242,35 +278,45 @@ class _SearchScreenState extends State<SearchScreen> {
             ],
           ),
         ),
-
-        bottomNavigationBar: BottomAppBar(
-          shape: const CircularNotchedRectangle(), // Adds a notch for FAB if needed
-          color: Colors.blueAccent, // Makes it stand out
-          elevation: 10, // Adds depth effect
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12), // Adds spacing for better touch
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.history, color: Colors.white, size: 28),
-                  onPressed: _showRecentSearches,
-                  tooltip: 'Search History',
+        bottomNavigationBar: ClipRRect(
+          borderRadius: BorderRadius.circular(20), // Rounded corners for circular effect
+          child: BottomAppBar(
+            color: Colors.transparent, // Make the background transparent for gradient
+            elevation: 20, // Adds shadow effect
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blueAccent, Colors.indigo], // Gradient colors
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.favorite, color: Colors.white, size: 28),
-                  onPressed: _showFavorites,
-                  tooltip: 'Favorites',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.brightness_6, color: Colors.white, size: 28),
-                  onPressed: widget.toggleTheme,
-                  tooltip: 'Toggle Theme',
-                ),
-              ],
+                borderRadius: BorderRadius.circular(20), // Ensures the curve matches the app bar
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.history, color: Colors.white, size: 28),
+                    onPressed: _showRecentSearches,
+                    tooltip: 'Search History',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.favorite, color: Colors.white, size: 28),
+                    onPressed: _showFavorites,
+                    tooltip: 'Favorites',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.brightness_6, color: Colors.white, size: 28),
+                    onPressed: widget.toggleTheme,
+                    tooltip: 'Toggle Theme',
+                  ),
+                ],
+              ),
             ),
           ),
         ),
+
+
       ),
     );
   }
