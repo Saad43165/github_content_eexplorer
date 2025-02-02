@@ -7,6 +7,7 @@ class Repository {
   final int forksCount;
   final String ownerAvatarUrl;
   final String ownerLogin;
+  final String ownerName; // Added field for owner name
   final String? language;
   final String htmlUrl; // ✅ Repository URL
   final String createdAt; // ✅ Repository Creation Date
@@ -21,10 +22,11 @@ class Repository {
     required this.forksCount,
     required this.ownerAvatarUrl,
     required this.ownerLogin,
+    required this.ownerName, // Added owner name
     this.language,
-    required this.htmlUrl, // ✅ New field
-    required this.createdAt, // ✅ New field
-    required this.updatedAt, // ✅ New field
+    required this.htmlUrl, // ✅ Repository URL
+    required this.createdAt, // ✅ Repository Creation Date
+    required this.updatedAt, // ✅ Last Updated Date
   });
 
   // 🔹 Convert JSON to Repository
@@ -38,10 +40,11 @@ class Repository {
       forksCount: json['forks_count'],
       ownerAvatarUrl: json['owner']['avatar_url'],
       ownerLogin: json['owner']['login'],
+      ownerName: json['owner']['name'] ?? 'Unknown', // Handle null case by providing default value
       language: json['language'],
-      htmlUrl: json['html_url'], // ✅ Assign Repository URL
-      createdAt: json['created_at'] ?? '', // ✅ Assign Created Date
-      updatedAt: json['updated_at'] ?? '', // ✅ Assign Updated Date
+      htmlUrl: json['html_url'], // ✅ Repository URL
+      createdAt: json['created_at'] ?? '', // ✅ Repository Creation Date
+      updatedAt: json['updated_at'] ?? '', // ✅ Last Updated Date
     );
   }
 
@@ -57,6 +60,7 @@ class Repository {
       'owner': {
         'avatar_url': ownerAvatarUrl,
         'login': ownerLogin,
+        'name': ownerName, // Include owner name
       },
       'language': language,
       'html_url': htmlUrl, // ✅ Include Repository URL

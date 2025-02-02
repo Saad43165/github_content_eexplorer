@@ -92,6 +92,31 @@ class _DetailsScreenState extends State<DetailsScreen> {
                     ),
                     const SizedBox(height: 20),
 
+                    // Repository Owner Information
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircleAvatar(
+                          backgroundImage: NetworkImage(widget.repository.ownerAvatarUrl),
+                          radius: 20,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          widget.repository.ownerName, // No need for null check
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+
+                        SizedBox(width: 10),
+                        GestureDetector(
+                          onTap: () {
+                            _launchURL(context);  // Open the owner's GitHub profile
+                          },
+                          child: Icon(Icons.open_in_new, color: Colors.blueAccent),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
                     // Stats: Stars & Forks
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
