@@ -242,6 +242,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ],
           ),
         ),
+
         bottomNavigationBar: BottomAppBar(
           shape: const CircularNotchedRectangle(), // Adds a notch for FAB if needed
           color: Colors.blueAccent, // Makes it stand out
@@ -270,7 +271,6 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
         ),
-
       ),
     );
   }

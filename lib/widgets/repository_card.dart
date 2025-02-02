@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shimmer/shimmer.dart';
 import '../models/repository.dart';
 
@@ -24,7 +25,7 @@ class RepositoryCard extends StatelessWidget {
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
         margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
@@ -45,34 +46,37 @@ class RepositoryCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Owner Avatar with Shimmer Effect
-            ClipRRect(
-              borderRadius: BorderRadius.circular(40),
-              child: SizedBox(
-                width: 64,
-                height: 64,
-                child: Image.network(
-                  repository.ownerAvatarUrl,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Shimmer.fromColors(
-                      baseColor: Colors.grey[300]!,
-                      highlightColor: Colors.white,
-                      child: Container(color: Colors.white),
-                    );
-                  },
+            // ✅ Owner Avatar with Hero Animation & Shimmer Effect
+            Hero(
+              tag: 'avatar_${repository.id}',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(40),
+                child: SizedBox(
+                  width: 64,
+                  height: 64,
+                  child: Image.network(
+                    repository.ownerAvatarUrl,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Shimmer.fromColors(
+                        baseColor: Colors.grey[300]!,
+                        highlightColor: Colors.white,
+                        child: Container(color: Colors.white),
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
             const SizedBox(width: 12),
 
-            // Repository Info
+            // ✅ Repository Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Repository Name
+                  // ✅ Repository Name
                   Text(
                     repository.fullName,
                     style: const TextStyle(
@@ -85,7 +89,7 @@ class RepositoryCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
 
-                  // Description
+                  // ✅ Description
                   Text(
                     repository.description.isNotEmpty
                         ? repository.description
@@ -97,37 +101,60 @@ class RepositoryCard extends StatelessWidget {
                       color: Colors.white.withOpacity(0.85),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
 
-                  // Stats: Stars, Forks, Language
+                  // ✅ Stats Row (Stars, Forks, Language)
                   Row(
                     children: [
-                      _buildStat(Icons.star, Colors.yellow[700]!, repository.stargazersCount),
+                      _buildStat(Icons.star, Colors.amber, repository.stargazersCount),
                       const SizedBox(width: 16),
                       _buildStat(Icons.call_split, Colors.blueAccent, repository.forksCount),
                       const SizedBox(width: 16),
-                      _buildLanguageTag(repository.language ?? "Unknown"),
+                      _buildLanguageBadge(repository.language ?? "Unknown"),
                     ],
+                  ),
+                  const SizedBox(height: 6),
+
+                  // ✅ Dates (Created & Last Updated)
+                  Text(
+                    "Created: ${repository.createdAt}",
+                    style: TextStyle(fontSize: 12, color: Colors.grey[300]),
+                  ),
+                  Text(
+                    "Updated: ${repository.updatedAt}",
+                    style: TextStyle(fontSize: 12, color: Colors.grey[300]),
                   ),
                 ],
               ),
             ),
 
-            // Favorite Button with Animation
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              transitionBuilder: (child, animation) {
-                return ScaleTransition(scale: animation, child: child);
-              },
-              child: IconButton(
-                key: ValueKey<bool>(isFavorite),
-                icon: Icon(
-                  isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: isFavorite ? Colors.redAccent : Colors.white70,
-                  size: 28,
+            // ✅ Favorite & Share Buttons
+            Column(
+              children: [
+                // Favorite Button with Animated Toggle
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (child, animation) {
+                    return ScaleTransition(scale: animation, child: child);
+                  },
+                  child: IconButton(
+                    key: ValueKey<bool>(isFavorite),
+                    icon: Icon(
+                      isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color: isFavorite ? Colors.redAccent : Colors.white70,
+                      size: 28,
+                    ),
+                    onPressed: onFavoriteToggle,
+                  ),
                 ),
-                onPressed: onFavoriteToggle,
-              ),
+                // Share Button
+                IconButton(
+                  icon: const Icon(Icons.share, color: Colors.white70),
+                  onPressed: () {
+                    Share.share('Check out this repository: ${repository.fullName}\n${repository.htmlUrl}');
+                  },
+                ),
+              ],
             ),
           ],
         ),
@@ -135,6 +162,7 @@ class RepositoryCard extends StatelessWidget {
     );
   }
 
+  /// ✅ Builds a stat row (Stars, Forks)
   Widget _buildStat(IconData icon, Color color, int count) {
     return Row(
       children: [
@@ -148,11 +176,21 @@ class RepositoryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildLanguageTag(String language) {
+  /// ✅ Builds a language badge with dynamic color
+  Widget _buildLanguageBadge(String language) {
+    final Map<String, Color> languageColors = {
+      'Dart': Colors.blue,
+      'JavaScript': Colors.yellow[700]!,
+      'Python': Colors.green,
+      'Java': Colors.orange,
+      'C++': Colors.purple,
+      'Unknown': Colors.grey,
+    };
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: languageColors[language] ?? Colors.white.withOpacity(0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(

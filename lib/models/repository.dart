@@ -8,6 +8,9 @@ class Repository {
   final String ownerAvatarUrl;
   final String ownerLogin;
   final String? language;
+  final String htmlUrl; // ✅ Repository URL
+  final String createdAt; // ✅ Repository Creation Date
+  final String updatedAt; // ✅ Last Updated Date
 
   Repository({
     required this.id,
@@ -19,6 +22,9 @@ class Repository {
     required this.ownerAvatarUrl,
     required this.ownerLogin,
     this.language,
+    required this.htmlUrl, // ✅ New field
+    required this.createdAt, // ✅ New field
+    required this.updatedAt, // ✅ New field
   });
 
   // 🔹 Convert JSON to Repository
@@ -33,6 +39,9 @@ class Repository {
       ownerAvatarUrl: json['owner']['avatar_url'],
       ownerLogin: json['owner']['login'],
       language: json['language'],
+      htmlUrl: json['html_url'], // ✅ Assign Repository URL
+      createdAt: json['created_at'] ?? '', // ✅ Assign Created Date
+      updatedAt: json['updated_at'] ?? '', // ✅ Assign Updated Date
     );
   }
 
@@ -50,6 +59,9 @@ class Repository {
         'login': ownerLogin,
       },
       'language': language,
+      'html_url': htmlUrl, // ✅ Include Repository URL
+      'created_at': createdAt, // ✅ Include Created Date
+      'updated_at': updatedAt, // ✅ Include Updated Date
     };
   }
 }
