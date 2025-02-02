@@ -1,4 +1,3 @@
-// lib/models/repository.dart
 class Repository {
   final int id;
   final String name;
@@ -8,6 +7,7 @@ class Repository {
   final int forksCount;
   final String ownerAvatarUrl;
   final String ownerLogin;
+  final String? language;
 
   Repository({
     required this.id,
@@ -18,8 +18,10 @@ class Repository {
     required this.forksCount,
     required this.ownerAvatarUrl,
     required this.ownerLogin,
+    this.language,
   });
 
+  // 🔹 Convert JSON to Repository
   factory Repository.fromJson(Map<String, dynamic> json) {
     return Repository(
       id: json['id'],
@@ -30,6 +32,24 @@ class Repository {
       forksCount: json['forks_count'],
       ownerAvatarUrl: json['owner']['avatar_url'],
       ownerLogin: json['owner']['login'],
+      language: json['language'],
     );
+  }
+
+  // 🔹 Convert Repository to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'full_name': fullName,
+      'description': description,
+      'stargazers_count': stargazersCount,
+      'forks_count': forksCount,
+      'owner': {
+        'avatar_url': ownerAvatarUrl,
+        'login': ownerLogin,
+      },
+      'language': language,
+    };
   }
 }

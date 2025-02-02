@@ -41,7 +41,8 @@ dev_dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.2
   http: ^0.13.5
-
+  shared_preferences: ^2.3.3
+  shimmer: ^3.0.0
 
     # URL Launcher to open repository URLs in the browser
   url_launcher: ^6.1.7

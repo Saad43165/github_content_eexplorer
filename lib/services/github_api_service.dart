@@ -1,4 +1,3 @@
-// lib/services/github_api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/repository.dart';
@@ -6,9 +5,17 @@ import '../models/repository.dart';
 class GithubApiService {
   final String baseUrl = 'https://api.github.com';
 
-  // Search repositories based on a query
-  Future<List<Repository>> searchRepositories(String query, {int page = 1}) async {
-    final url = '$baseUrl/search/repositories?q=$query&sort=stars&order=desc&page=$page';
+  Future<List<Repository>> searchRepositories(String query, {int page = 1, required String filter, required String sort}) async {
+    String url = '';
+
+    if (filter == 'Repository Name') {
+      url = '$baseUrl/search/repositories?q=$query+in:name&sort=stars&order=desc&page=$page';
+    } else if (filter == 'Programming Language') {
+      url = '$baseUrl/search/repositories?q=language:$query&sort=stars&order=desc&page=$page';
+    } else if (filter == 'Owner Account Name') {
+      url = '$baseUrl/search/repositories?q=user:$query&page=$page';
+    }
+
     final response = await http.get(Uri.parse(url));
 
     if (response.statusCode == 200) {

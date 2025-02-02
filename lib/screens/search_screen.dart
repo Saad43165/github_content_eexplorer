@@ -1,4 +1,3 @@
-// lib/screens/search_screen.dart
 import 'package:flutter/material.dart';
 import '../models/repository.dart';
 import '../services/github_api_service.dart';
@@ -7,7 +6,7 @@ import 'details_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   final VoidCallback toggleTheme;
-  const SearchScreen({Key? key, required this.toggleTheme}) : super(key: key);
+  const SearchScreen({super.key, required this.toggleTheme});
 
   @override
   _SearchScreenState createState() => _SearchScreenState();
@@ -22,8 +21,12 @@ class _SearchScreenState extends State<SearchScreen> {
   String _errorMessage = '';
   final Set<int> _favoriteRepoIds = {};
   final List<String> _recentSearches = [];
+  String _selectedFilter = 'Repository Name';
+  final List<Repository> _favoriteRepositories = [];
 
   Future<void> _searchRepositories(String query) async {
+    if (query.trim().isEmpty) return;
+
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -31,11 +34,10 @@ class _SearchScreenState extends State<SearchScreen> {
     });
 
     try {
-      final repos = await _apiService.searchRepositories(query);
+      final repos = await _apiService.searchRepositories(query, filter: _selectedFilter, sort: '');
       setState(() {
         _repositories = repos;
-        // Add to recent searches if new and not empty.
-        if (query.isNotEmpty && !_recentSearches.contains(query)) {
+        if (!_recentSearches.contains(query)) {
           _recentSearches.insert(0, query);
           if (_recentSearches.length > 5) _recentSearches.removeLast();
         }
@@ -51,159 +53,89 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  void _onSearchSubmitted(String query) {
-    if (query.trim().isNotEmpty) {
-      _searchRepositories(query.trim());
-    }
-  }
-
   void _toggleFavorite(Repository repo) {
     setState(() {
       if (_favoriteRepoIds.contains(repo.id)) {
         _favoriteRepoIds.remove(repo.id);
+        _favoriteRepositories.removeWhere((item) => item.id == repo.id);
       } else {
         _favoriteRepoIds.add(repo.id);
+        _favoriteRepositories.add(repo);
       }
     });
   }
 
-  void _showFavoritesBottomSheet() {
-    final favoriteRepos =
-    _repositories.where((repo) => _favoriteRepoIds.contains(repo.id)).toList();
+  Widget _buildFilterButton(String filter) {
+    return GestureDetector(
+      onTap: () => setState(() => _selectedFilter = filter),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          color: _selectedFilter == filter ? Colors.blueAccent : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.blueAccent),
+          boxShadow: [
+            if (_selectedFilter == filter)
+              BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 8, spreadRadius: 2),
+          ],
+        ),
+        child: Text(
+          filter,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: _selectedFilter == filter ? Colors.white : Colors.blueAccent,
+          ),
+        ),
+      ),
+    );
+  }
 
+  void _showRecentSearches() {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (context) {
-        return Container(
-          padding: EdgeInsets.all(16),
-          constraints: BoxConstraints(
-            minHeight: 200,
-            maxHeight: MediaQuery.of(context).size.height * 0.75,
-          ),
-          child: favoriteRepos.isEmpty
-              ? Center(
-            child: Text(
-              'No favorites yet.',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: _recentSearches
+              .map(
+                (query) => ListTile(
+              title: Text(query),
+              trailing: const Icon(Icons.search, color: Colors.blueAccent),
+              onTap: () {
+                _searchController.text = query;
+                _searchRepositories(query);
+                Navigator.pop(context);
+              },
             ),
           )
-              : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 5,
-                  margin: EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-              Text(
-                'Your Favorites',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: favoriteRepos.length,
-                  itemBuilder: (context, index) {
-                    final repo = favoriteRepos[index];
-                    return Card(
-                      margin: EdgeInsets.symmetric(vertical: 6),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage: NetworkImage(repo.ownerAvatarUrl),
-                        ),
-                        title: Text(
-                          repo.fullName,
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text(
-                          repo.description,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => DetailsScreen(repository: repo),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+              .toList(),
         );
       },
     );
   }
 
-  void _showRecentSearches() {
-    if (_recentSearches.isEmpty) return;
+  void _showFavorites() {
     showModalBottomSheet(
       context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (context) {
-        return Container(
-          padding: EdgeInsets.all(16),
-          constraints: BoxConstraints(
-            minHeight: 150,
-            maxHeight: MediaQuery.of(context).size.height * 0.5,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 5,
-                  margin: EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: _favoriteRepositories.isEmpty
+              ? [const Center(child: Text('No favorites yet.'))]
+              : _favoriteRepositories
+              .map(
+                (repo) => RepositoryCard(
+              repository: repo,
+              isFavorite: _favoriteRepoIds.contains(repo.id),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => DetailsScreen(repository: repo)),
               ),
-              Text(
-                'Recent Searches',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _recentSearches.length,
-                  itemBuilder: (context, index) {
-                    final query = _recentSearches[index];
-                    return ListTile(
-                      leading: Icon(Icons.history),
-                      title: Text(query),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _searchController.text = query;
-                        _onSearchSubmitted(query);
-                      },
-                    );
-                  },
-                ),
-              )
-            ],
-          ),
+              onFavoriteToggle: () => _toggleFavorite(repo),
+            ),
+          )
+              .toList(),
         );
       },
     );
@@ -213,102 +145,132 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          title: const Text('GitHub Explorer', style: TextStyle(fontWeight: FontWeight.bold)),
+          centerTitle: true,
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blueAccent, Colors.indigoAccent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+        ),
         body: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('GitHub Explorer',style: TextStyle(fontWeight: FontWeight.bold,fontSize: 24),),
-              Divider(endIndent: 190,color: Colors.indigo,thickness: 2,),
-              SizedBox(height: 10),
-              // Search Input Field
-              TextField(
-                controller: _searchController,
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText: 'Search Repositories',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+              const SizedBox(height: 60),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
                 ),
-                onSubmitted: _onSearchSubmitted,
+                child: TextField(
+                  controller: _searchController,
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: 'Search GitHub...',
+                    prefixIcon: const Icon(Icons.search, color: Colors.blueAccent),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                  onSubmitted: _searchRepositories,
+                ),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 16),
+              if (_recentSearches.isNotEmpty)
+                Wrap(
+                  children: _recentSearches
+                      .map((query) => GestureDetector(
+                    onTap: () => _searchRepositories(query),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Text(query),
+                    ),
+                  ))
+                      .toList(),
+                ),
+              const SizedBox(height: 16),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildFilterButton('Repository Name'),
+                    _buildFilterButton('Programming Language'),
+                    _buildFilterButton('Owner Account Name'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               if (_isLoading)
-                Expanded(child: Center(child: CircularProgressIndicator()))
+                const Expanded(child: Center(child: CircularProgressIndicator()))
               else if (_errorMessage.isNotEmpty)
-                Expanded(child: Center(child: Text(_errorMessage)))
+                Expanded(child: Center(child: Text(_errorMessage, style: TextStyle(color: Colors.redAccent))))
               else if (_repositories.isEmpty)
-                  Expanded(child: Center(child: Text('No results. Enter a search query.')))
+                  const Expanded(child: Center(child: Text('No results found. Try searching something.')))
                 else
                   Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: () async {
-                        if (_searchController.text.trim().isNotEmpty) {
-                          _onSearchSubmitted(_searchController.text.trim());
-                        }
+                    child: ListView.builder(
+                      itemCount: _repositories.length,
+                      itemBuilder: (context, index) {
+                        final repo = _repositories[index];
+                        return RepositoryCard(
+                          repository: repo,
+                          isFavorite: _favoriteRepoIds.contains(repo.id),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => DetailsScreen(repository: repo)),
+                          ),
+                          onFavoriteToggle: () => _toggleFavorite(repo),
+                        );
                       },
-                      child: ListView.builder(
-                        itemCount: _repositories.length,
-                        itemBuilder: (context, index) {
-                          final repo = _repositories[index];
-                          return RepositoryCard(
-                            repository: repo,
-                            isFavorite: _favoriteRepoIds.contains(repo.id),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => DetailsScreen(repository: repo),
-                                ),
-                              );
-                            },
-                            onFavoriteToggle: () => _toggleFavorite(repo),
-                          );
-                        },
-                      ),
                     ),
                   ),
             ],
           ),
         ),
-        // New Bottom Bar with History, Favorites, and Dark Mode Buttons
-        bottomNavigationBar: Padding(
-          padding: const EdgeInsets.only(bottom: 10, left: 5, right: 5),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(15), // Ensure clipping
-            child: BottomAppBar(
-              color: Colors.indigo.withOpacity(0.4), // Make it transparent for Container styling
-              elevation: 1, // Remove extra elevation
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    IconButton(
-                      tooltip: 'Recent Searches',
-                      icon: Icon(Icons.history, size: 28),
-                      onPressed: _showRecentSearches,
-                    ),
-                    IconButton(
-                      tooltip: 'Favorites',
-                      icon: Icon(Icons.favorite, size: 28),
-                      onPressed: _showFavoritesBottomSheet,
-                    ),
-                    IconButton(
-                      tooltip: 'Toggle Theme',
-                      icon: Icon(Icons.brightness_6, size: 28),
-                      onPressed: widget.toggleTheme,
-                    ),
-                  ],
+        bottomNavigationBar: BottomAppBar(
+          shape: const CircularNotchedRectangle(), // Adds a notch for FAB if needed
+          color: Colors.blueAccent, // Makes it stand out
+          elevation: 10, // Adds depth effect
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12), // Adds spacing for better touch
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.history, color: Colors.white, size: 28),
+                  onPressed: _showRecentSearches,
+                  tooltip: 'Search History',
                 ),
-              ),
+                IconButton(
+                  icon: const Icon(Icons.favorite, color: Colors.white, size: 28),
+                  onPressed: _showFavorites,
+                  tooltip: 'Favorites',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.brightness_6, color: Colors.white, size: 28),
+                  onPressed: widget.toggleTheme,
+                  tooltip: 'Toggle Theme',
+                ),
+              ],
             ),
           ),
         ),
-      
+
       ),
     );
   }
